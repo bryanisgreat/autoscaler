@@ -1,13 +1,13 @@
 all: build
 
 TAG?=dev
-REGISTRY?=staging-k8s.gcr.io
+REGISTRY?=docker.pkg.github.com
 FLAGS=
 TEST_ENVVAR=LD_FLAGS=-s GO111MODULE=on
 ENVVAR=CGO_ENABLED=0 $(TEST_ENVVAR)
 GOOS?=linux
 COMPONENT=recommender
-FULL_COMPONENT=vpa-${COMPONENT}
+FULL_COMPONENT=bryanisgreat/autoscaler/vpa-${COMPONENT}
 
 build: clean
 	$(ENVVAR) GOOS=$(GOOS) go build ./...

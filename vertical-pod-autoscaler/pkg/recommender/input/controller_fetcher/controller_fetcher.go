@@ -155,6 +155,8 @@ func getParentOfWellKnownController(informer cache.SharedIndexInformer, controll
 		return nil, fmt.Errorf("%s %s/%s does not exist", kind, namespace, name)
 	}
 	switch obj.(type) {
+	case (*corev1.Pod):
+		return nil, nil
 	case (*appsv1.DaemonSet):
 		apiObj, ok := obj.(*appsv1.DaemonSet)
 		if !ok {

@@ -475,11 +475,13 @@ func (feeder *clusterStateFeeder) validateTargetRef(vpa *vpa_types.VerticalPodAu
 func (feeder *clusterStateFeeder) getSelector(vpa *vpa_types.VerticalPodAutoscaler) (labels.Selector, []condition) {
 	selector, fetchErr := feeder.selectorFetcher.Fetch(vpa)
 	if selector != nil {
-		validTargetRef, unsupportedCondition := feeder.validateTargetRef(vpa)
-		if !validTargetRef {
-			return labels.Nothing(), []condition{
-				unsupportedCondition,
-				{conditionType: vpa_types.ConfigDeprecated, delete: true},
+		if vpa.Spec.TargetRef != nil {
+			validTargetRef, unsupportedCondition := feeder.validateTargetRef(vpa)
+			if !validTargetRef {
+				return labels.Nothing(), []condition{
+					unsupportedCondition,
+					{conditionType: vpa_types.ConfigDeprecated, delete: true},
+				}
 			}
 		}
 		return selector, []condition{

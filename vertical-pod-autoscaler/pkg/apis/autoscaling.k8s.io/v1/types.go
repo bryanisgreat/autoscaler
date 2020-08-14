@@ -73,6 +73,9 @@ type VerticalPodAutoscalerSpec struct {
 	// the target resource.
 	TargetRef *autoscaling.CrossVersionObjectReference `json:"targetRef" protobuf:"bytes,1,name=targetRef"`
 
+	// if targetRef is a Pod, this is uses as the grouping selector
+	Selector *metav1.LabelSelector `json:"selector,omitempty" protobuf:"bytes,4,name=selector"`
+
 	// Describes the rules on how changes are applied to the pods.
 	// If not specified, all fields in the `PodUpdatePolicy` are set to their
 	// default values.

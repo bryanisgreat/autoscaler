@@ -118,32 +118,40 @@ type vpaTargetSelectorFetcher struct {
 }
 
 func (f *vpaTargetSelectorFetcher) Fetch(vpa *vpa_types.VerticalPodAutoscaler) (labels.Selector, error) {
-	if vpa.Spec.TargetRef == nil {
-		return nil, fmt.Errorf("targetRef not defined. If this is a v1beta1 object switch to v1beta2.")
+	if vpa.Spec.TargetRef == nil && vpa.Spec.Selector == nil {
+		return nil, fmt.Errorf("targetRef or selector must be defined")
 	}
-	kind := wellKnownController(vpa.Spec.TargetRef.Kind)
-	informer, exists := f.informersMap[kind]
-	if exists {
-		return getLabelSelector(informer, vpa.Spec.TargetRef.Kind, vpa.Namespace, vpa.Spec.TargetRef.Name)
+	if vpa.Spec.TargetRef != nil {
+		kind := wellKnownController(vpa.Spec.TargetRef.Kind)
+		informer, exists := f.informersMap[kind]
+		if exists {
+			return getLabelSelector(informer, vpa.Spec.TargetRef.Kind, vpa.Namespace, vpa.Spec.TargetRef.Name)
+		}
+
+		// not on a list of known controllers, use scale sub-resource
+		// TODO: cache response
+		groupVersion, err := schema.ParseGroupVersion(vpa.Spec.TargetRef.APIVersion)
+		if err != nil {
+			return nil, err
+		}
+		groupKind := schema.GroupKind{
+			Group: groupVersion.Group,
+			Kind:  vpa.Spec.TargetRef.Kind,
+		}
+
+		selector, err := f.getLabelSelectorFromResource(groupKind, vpa.Namespace, vpa.Spec.TargetRef.Name)
+		if err != nil {
+			return nil, fmt.Errorf("Unhandled targetRef %s / %s / %s, last error %v",
+				vpa.Spec.TargetRef.APIVersion, vpa.Spec.TargetRef.Kind, vpa.Spec.TargetRef.Name, err)
+		}
+		return selector, nil
 	}
 
-	// not on a list of known controllers, use scale sub-resource
-	// TODO: cache response
-	groupVersion, err := schema.ParseGroupVersion(vpa.Spec.TargetRef.APIVersion)
-	if err != nil {
-		return nil, err
-	}
-	groupKind := schema.GroupKind{
-		Group: groupVersion.Group,
-		Kind:  vpa.Spec.TargetRef.Kind,
+	if vpa.Spec.Selector != nil {
+		return metav1.LabelSelectorAsSelector(vpa.Spec.Selector)
 	}
 
-	selector, err := f.getLabelSelectorFromResource(groupKind, vpa.Namespace, vpa.Spec.TargetRef.Name)
-	if err != nil {
-		return nil, fmt.Errorf("Unhandled targetRef %s / %s / %s, last error %v",
-			vpa.Spec.TargetRef.APIVersion, vpa.Spec.TargetRef.Kind, vpa.Spec.TargetRef.Name, err)
-	}
-	return selector, nil
+	return nil, fmt.Errorf("fetcher unknown error")
 }
 
 func getLabelSelector(informer cache.SharedIndexInformer, kind, namespace, name string) (labels.Selector, error) {
